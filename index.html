@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Entry — make.fun Bring the Humans</title>
+<style>
+body{background:#0a0b10;color:#e8eaf0;font-family:system-ui,sans-serif;padding:20px;max-width:700px;margin:0 auto}
+h1{font-size:1.4rem;color:#f3c661}
+pre{background:#13151d;border:1px solid #23252f;border-radius:10px;padding:14px;white-space:pre-wrap;word-break:break-all;font-size:.75rem}
+button{background:linear-gradient(90deg,#a76a14,#f3c661);color:#0a0b10;font-weight:800;padding:16px 28px;border:0;border-radius:12px;font-size:1rem;width:100%;margin-top:16px}
+#out{margin-top:16px}
+textarea{width:100%;height:120px;background:#13151d;color:#e8eaf0;border:1px solid #23252f;border-radius:10px;padding:10px;font-family:monospace;font-size:.7rem}
+</style>
+</head>
+<body>
+<h1>🔐 Sign Entry Message</h1>
+<p style="color:#8b9098;font-size:.9rem">Halaman ini akan meminta wallet Solflare loe menandatangani entry message. Signature hasilnya tinggal copy-paste ke chat.</p>
+
+<h2 style="font-size:1rem;color:#f3c661">Message yang ditandatangani:</h2>
+<pre id="msg"></pre>
+
+<button id="signBtn">✍️ Sign dengan Solflare</button>
+<div id="out" style="display:none">
+  <h2 style="font-size:1rem;color:#f3c661">✅ Signature (copy semua):</h2>
+  <textarea id="sig" readonly></textarea>
+  <button id="copyBtn" style="margin-top:8px">📋 Copy Signature</button>
+</div>
+<p id="err" style="color:#ff6b6b;display:none"></p>
+
+<script>
+const ENTRY_MSG = `make.fun entry v1
+Domain: make.fun
+Competition: bring-the-humans-01
+Repo: https://github.com/septianfarhan459-lgtm/makefun-ad-bring-the-humans
+Commit: c0cc9cd2513feaf7b576c7f1dc9840798a088668
+Transcripts: 074152932833741f40466b0eda411ae1d54d4907fda2274cf45c20dc275f3d72
+Wallet: FR58AcL9NxSfaeHL12veqWxNDZqFmiAqa8zMiFWuKbuA
+Nonce: entry-portal-001
+Issued At: 2026-11-15T17:30:00.000Z`;
+
+document.getElementById('msg').textContent = ENTRY_MSG;
+
+// Solflare provider detection
+function getProvider(){ return window.solflare || window.solana; }
+
+document.getElementById('signBtn').onclick = async () => {
+  const prov = getProvider();
+  const err = document.getElementById('err');
+  err.style.display='none';
+  if(!prov){
+    err.style.display='block';
+    err.textContent='❌ Solflare gak terdeteksi. Di HP: buka halaman ini lewat browser dApp di dalam aplikasi Solflare. Di PC: pastikan extension Solflare terinstall & aktif.';
+    return;
+  }
+  try{
+    if(prov.isConnected === false){ await prov.connect(); }
+    const encoded = new TextEncoder().encode(ENTRY_MSG);
+    const res = await prov.signMessage(encoded, 'utf8');
+    // signature -> base58
+    const bytes = res.signature || res.data;
+    const ALPHABET='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+    let n=BigInt('0x'+[...new Uint8Array(bytes)].map(b=>b.toString(16).padStart(2,'0')).join(''));
+    let s='';
+    while(n>0n){ s=ALPHABET[Number(n%58n)]+s; n/=58n; }
+    // leading zeros
+    for(const b of new Uint8Array(bytes)){ if(b===0) s='1'+s; else break; }
+    document.getElementById('sig').value = s;
+    document.getElementById('out').style.display='block';
+    document.getElementById('out').scrollIntoView({behavior:'smooth'});
+  }catch(e){
+    err.style.display='block';
+    err.textContent='❌ Error: '+e.message;
+  }
+};
+
+document.getElementById('copyBtn').onclick = () => {
+  const t=document.getElementById('sig');
+  t.select();
+  navigator.clipboard.writeText(t.value).then(()=>{ document.getElementById('copyBtn').textContent='✅ Tercopy! Kirim ke chat'; });
+};
+</script>
+</body>
+</html>
